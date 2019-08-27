@@ -1,7 +1,9 @@
 #!/usr/bin/python3
 # coding: utf-8
 
+import os
 import json
+import zlib
 
 FILE = "base/gameresources"
 
@@ -42,6 +44,8 @@ class ByteTools():
     def parseInt64(self): return self.parseInt(8)
 
 print("File: %s" % FILE + '.index')
+
+print("Generating file list...")
 
 with open(FILE + '.index', 'rb') as _in:
     index = ByteTools(_in)
@@ -125,6 +129,22 @@ with open(FILE + '.index', 'rb') as _in:
             'comp_size': compressedsize,
             'patch': patchfilenumber
         })
+
+def extract(pos, size, compressed=True):
+    import zlib
+
+    with open(FILE + '.resources', 'rb') as _in:
+        _in.seek(pos)
+
+        data = _in.read(size)
+
+        if compressed:
+            try:
+                data = zlib.decompress(data)
+            except Exception as e:
+                print(e)
+
+    return data
 
 def generateTree(entries):
     tree = {}
@@ -225,18 +245,34 @@ class GUI:
 
             print("Double clicked on file %s" % data['pure_res'])
 
-            if self.confirm("Do you wish to extract %s? (~%s Kb)" % (data['pure_res'], str(round(data['size'] / 1024, 2)))):
-                self.alert("Extracting %s..." % data['pure_res'])
+            compressed = data['size'] != data['comp_size']
+
+            if self.confirm("Do you wish to extract %s? (~%s Kb) [%s]" % (data['pure_res'], str(round(data['size'] / 1024, 2)), 'COMPRESSED' if compressed else 'UNCOMPRESSED')):
+                #self.alert("Extracting %s..." % data['pure_res'])
+                extracted = extract(data['offset'], data['comp_size'], compressed=compressed)
+                folders = '/'.join(data['pure_res'].split('/')[:-1])
+                filename = data['pure_res'].split('/')[-1]
+                folderpath = os.path.join(FILE, folders)
+                print("Creating folders %s..." % folderpath)
+                os.makedirs(folderpath)
+
+                with open(os.path.join(folderpath, filename), 'wb') as _out:
+                        _out.write(extracted)
+
+                self.alert("Extracted successfully!")
         else:
             print("Double clicked on folder")
 
-
-
-
+print("Generating file list... [OK!]")
+print("Generating folder tree...")
 tree = generateTree(entries)
-generateJSON(tree)
-tree = json.loads(json.dumps(tree))
 
+print("Generating folder tree... [OK!]")
+print("Generating JSON file...") 
+generateJSON(tree)
+
+print("Generating JSON file... [OK!]") 
+print("Starting GUI...")
 gui = GUI()
 gui.buildTable(tree)
 gui.mainloop()
