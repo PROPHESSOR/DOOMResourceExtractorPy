@@ -71,7 +71,7 @@ with open(FILE + '.index', 'rb') as _in:
 
     entries = []
 
-    for i in range(header_numentries): # FIXME
+    for i in range(header_numentries):
         index.byteorder('big')
         ID = index.parseInt32()
 
@@ -149,9 +149,6 @@ def generateTree(entries):
 
             if not token in context: context[token] = {}
 
-            if not 'type' in context:
-                print("FOLDER OR BUG", _token, context)
-
             context = context[token]
 
     return tree
@@ -210,7 +207,9 @@ class GUI:
             value = level[key]
             if 'id' in value: # File
                 if not 'type' in value:
-                    print("BUGGED VALUE", value)
+                    print("FIXME: [BUGGED VALUE]", value)
+                    continue
+
                 _folder = self.tree.insert(folder or self._root_files, "end", json.dumps(value), text=key, values=(value['type'], self.toReadableSize(value['size']), self.toReadableSize(value['comp_size']), json.dumps(value)))
             else: # Folderself.tree
                 _folder = self.tree.insert(folder, "end", "", text=key, values=("Folder", str(len(value.keys())) + " files", ""))
@@ -222,7 +221,6 @@ class GUI:
         values = self.tree.item(selection, 'values')
 
         if len(values) == 4:
-            print(values[3])
             data = json.loads(values[3])
 
             print("Double clicked on file %s" % data['pure_res'])
@@ -237,6 +235,7 @@ class GUI:
 
 tree = generateTree(entries)
 generateJSON(tree)
+tree = json.loads(json.dumps(tree))
 
 gui = GUI()
 gui.buildTable(tree)
