@@ -2,8 +2,9 @@
 # coding: utf-8
 
 import os
+import sys
 import json
-import zlib
+import gzip
 
 FILE = "base/gameresources"
 
@@ -42,6 +43,13 @@ class ByteTools():
     def parseInt16(self): return self.parseInt(2)
     def parseInt32(self): return self.parseInt(4)
     def parseInt64(self): return self.parseInt(8)
+
+if '--help' in sys.argv or '-h' in sys.argv:
+    print("DOOM (2016) Resource Extractor [Copyright (c) PROPHESSOR 2019]")
+    print()
+    print("Available arguments")
+    print("\t--json\tWrite file structure into JSON file")
+    exit()
 
 print("File: %s" % FILE + '.index')
 
@@ -131,8 +139,6 @@ with open(FILE + '.index', 'rb') as _in:
         })
 
 def extract(pos, size, compressed=True):
-    import zlib
-
     with open(FILE + '.resources', 'rb') as _in:
         _in.seek(pos)
 
@@ -140,7 +146,8 @@ def extract(pos, size, compressed=True):
 
         if compressed:
             try:
-                data = zlib.decompress(data)
+                data = gzip.decompress(b'\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\x00' + data)
+                #data = gzip.decompress(b'\x78\x9c' + data)
             except Exception as e:
                 print(e)
 
@@ -254,7 +261,7 @@ class GUI:
                 filename = data['pure_res'].split('/')[-1]
                 folderpath = os.path.join(FILE, folders)
                 print("Creating folders %s..." % folderpath)
-                os.makedirs(folderpath)
+                os.makedirs(folderpath, exist_ok=True)
 
                 with open(os.path.join(folderpath, filename), 'wb') as _out:
                         _out.write(extracted)
@@ -268,10 +275,11 @@ print("Generating folder tree...")
 tree = generateTree(entries)
 
 print("Generating folder tree... [OK!]")
-print("Generating JSON file...") 
-generateJSON(tree)
+if '--json' in sys.argv:
+    print("Generating JSON file...") 
+    generateJSON(tree)
 
-print("Generating JSON file... [OK!]") 
+    print("Generating JSON file... [OK!]") 
 print("Starting GUI...")
 gui = GUI()
 gui.buildTable(tree)
